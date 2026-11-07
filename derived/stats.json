@@ -1,0 +1,51 @@
+{
+  "descartadas": {
+    "truncada": 175
+  },
+  "por_nivel": {
+    "L0": {
+      "tareas": 30,
+      "respuestas": 113,
+      "tareas_con_acierto": 30,
+      "sft": 60,
+      "dpo": 21
+    },
+    "L1": {
+      "tareas": 30,
+      "respuestas": 120,
+      "tareas_con_acierto": 30,
+      "sft": 59,
+      "dpo": 13
+    },
+    "L2": {
+      "tareas": 120,
+      "respuestas": 480,
+      "tareas_con_acierto": 120,
+      "sft": 238,
+      "dpo": 100
+    },
+    "L3": {
+      "tareas": 120,
+      "respuestas": 441,
+      "tareas_con_acierto": 120,
+      "sft": 239,
+      "dpo": 82
+    },
+    "L4": {
+      "tareas": 120,
+      "respuestas": 421,
+      "tareas_con_acierto": 120,
+      "sft": 240,
+      "dpo": 180
+    },
+    "L5": {
+      "tareas": 115,
+      "respuestas": 455,
+      "tareas_con_acierto": 91,
+      "sft": 165,
+      "dpo": 178
+    }
+  },
+  "total_sft": 1001,
+  "total_dpo": 574
+}

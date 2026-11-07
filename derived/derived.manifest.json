@@ -1,0 +1,39 @@
+{
+  "corridas": [
+    {
+      "creado": "2026-11-07T20:21:00-03:00",
+      "comando": "derive.py --tasks data/train.jsonl --results results/train/deepseek-v4.1-flash_L2-L5.jsonl results/train/deepseek-v4.1-flash_L0-L1.jsonl results/train/qwen3-1.7b_think_L2-L5.jsonl results/train/qwen3-1.7b_think_L0-L1.jsonl --sft-models opencode-go/deepseek-v4.1-flash --out-dir derived/",
+      "parametros": {
+        "tasks": [
+          "data/train.jsonl"
+        ],
+        "results": [
+          "results/train/deepseek-v4.1-flash_L2-L5.jsonl",
+          "results/train/deepseek-v4.1-flash_L0-L1.jsonl",
+          "results/train/qwen3-1.7b_think_L2-L5.jsonl",
+          "results/train/qwen3-1.7b_think_L0-L1.jsonl"
+        ],
+        "out_dir": "derived/",
+        "sft_per_task": 2,
+        "dpo_per_task": 2,
+        "sft_models": [
+          "opencode-go/deepseek-v4.1-flash"
+        ],
+        "include_reasoning": false,
+        "allow_non_train": false,
+        "seed": 0
+      },
+      "verificador_sha256": "d3d3906446eb9eaa",
+      "entradas": {
+        "data/train.jsonl": "327b07971fdba3aa",
+        "results/train/deepseek-v4.1-flash_L2-L5.jsonl": "94e337c1647e0ec8",
+        "results/train/deepseek-v4.1-flash_L0-L1.jsonl": "5d6c545b6d66e8e1",
+        "results/train/qwen3-1.7b_think_L2-L5.jsonl": "9629849a677b7797",
+        "results/train/qwen3-1.7b_think_L0-L1.jsonl": "729e297a66b306c2"
+      },
+      "python": "3.13.18",
+      "total_sft": 1001,
+      "total_dpo": 574
+    }
+  ]
+}

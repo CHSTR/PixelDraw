@@ -1,0 +1,68 @@
+{
+  "corridas": [
+    {
+      "creado": "2026-11-07T15:21:20-03:00",
+      "comando": "probe_pd.py --tasks data/eval.jsonl --base-url http://localhost:8080/v1 --model qwen3-1.7b --k 8 --per-cell 10 --no-think --temperature 1.0 --workers 8 --out res_1p7b_eval_nothink.jsonl",
+      "parametros": {
+        "tasks": "data/eval.jsonl",
+        "base_url": "http://localhost:8080/v1",
+        "model": "qwen3-1.7b",
+        "retries": 6,
+        "k": 8,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 4096,
+        "no_think": true,
+        "extra": "{}",
+        "workers": 8,
+        "timeout": 1200,
+        "levels": null,
+        "sizes": null,
+        "per_cell": 10,
+        "seed": 0,
+        "out": "res_1p7b_eval_nothink.jsonl",
+        "no_resume": false,
+        "summarize": null,
+        "rescore": null
+      },
+      "verificador_sha256": "8679777011d45903",
+      "entradas": {
+        "data/eval.jsonl": "a7ef93e626ed96a7"
+      },
+      "python": "3.12.13",
+      "tareas_elegidas": 158
+    },
+    {
+      "creado": "2026-11-07T15:21:30-03:00",
+      "comando": "probe_pd.py --tasks data/eval.jsonl --base-url http://localhost:8081/v1 --model qwen3-1.7b --k 8 --per-cell 10 --no-think --temperature 1.0 --workers 8 --out res_1p7b_eval_nothink.jsonl",
+      "parametros": {
+        "tasks": "data/eval.jsonl",
+        "base_url": "http://localhost:8081/v1",
+        "model": "qwen3-1.7b",
+        "retries": 6,
+        "k": 8,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 4096,
+        "no_think": true,
+        "extra": "{}",
+        "workers": 8,
+        "timeout": 1200,
+        "levels": null,
+        "sizes": null,
+        "per_cell": 10,
+        "seed": 0,
+        "out": "res_1p7b_eval_nothink.jsonl",
+        "no_resume": false,
+        "summarize": null,
+        "rescore": null
+      },
+      "verificador_sha256": "8679777011d45903",
+      "entradas": {
+        "data/eval.jsonl": "a7ef93e626ed96a7"
+      },
+      "python": "3.12.13",
+      "tareas_elegidas": 158
+    }
+  ]
+}

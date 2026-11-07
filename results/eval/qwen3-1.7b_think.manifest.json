@@ -1,0 +1,36 @@
+{
+  "corridas": [
+    {
+      "creado": "2026-11-07T16:24:49-03:00",
+      "comando": "probe_pd.py --tasks data/eval.jsonl --base-url http://localhost:8081/v1 --model qwen3-1.7b --k 4 --per-cell 10 --max-tokens 6000 --temperature 1.0 --workers 8 --out res_1p7b_eval_think.jsonl",
+      "parametros": {
+        "tasks": "data/eval.jsonl",
+        "base_url": "http://localhost:8081/v1",
+        "model": "qwen3-1.7b",
+        "retries": 6,
+        "k": 4,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 6000,
+        "no_think": false,
+        "extra": "{}",
+        "workers": 8,
+        "timeout": 1200,
+        "levels": null,
+        "sizes": null,
+        "per_cell": 10,
+        "seed": 0,
+        "out": "res_1p7b_eval_think.jsonl",
+        "no_resume": false,
+        "summarize": null,
+        "rescore": null
+      },
+      "verificador_sha256": "8679777011d45903",
+      "entradas": {
+        "data/eval.jsonl": "a7ef93e626ed96a7"
+      },
+      "python": "3.12.13",
+      "tareas_elegidas": 158
+    }
+  ]
+}

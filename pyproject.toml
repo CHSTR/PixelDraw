@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pixeldraw"
+version = "1.0.0"
+description = "Entorno con recompensa verificable para entrenar a un LLM a dibujar en grillas a partir de texto"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+figuras = ["matplotlib"]
+dev = ["pytest"]
+
+[project.scripts]
+pixeldraw-generate = "pixeldraw.generate:main"
+pixeldraw-probe = "pixeldraw.probe:main"
+pixeldraw-probe-opencode = "pixeldraw.probe_opencode:main"
+pixeldraw-derive = "pixeldraw.derive:main"
+pixeldraw-report = "pixeldraw.report:main"
+pixeldraw-render = "pixeldraw.render:main"
+
+[tool.setuptools]
+packages = ["pixeldraw"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
