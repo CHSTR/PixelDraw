@@ -1,0 +1,36 @@
+{
+  "corridas": [
+    {
+      "creado": "2026-11-07T20:41:49-03:00",
+      "comando": "probe.py --tasks data/eval.jsonl --base-url http://localhost:8081/v1 --model qwen-27b --k 4 --per-cell 10 --no-think --extra {\"chat_template_kwargs\":{\"enable_thinking\":false}} --temperature 1.0 --workers 4 --out results/eval/qwen-27b_nothink.jsonl",
+      "parametros": {
+        "tasks": "data/eval.jsonl",
+        "base_url": "http://localhost:8081/v1",
+        "model": "qwen-27b",
+        "retries": 6,
+        "k": 4,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 4096,
+        "no_think": true,
+        "extra": "{\"chat_template_kwargs\":{\"enable_thinking\":false}}",
+        "workers": 4,
+        "timeout": 1200,
+        "levels": null,
+        "sizes": null,
+        "per_cell": 10,
+        "seed": 0,
+        "out": "results/eval/qwen-27b_nothink.jsonl",
+        "no_resume": false,
+        "summarize": null,
+        "rescore": null
+      },
+      "verificador_sha256": "99b6a526bbf8ed5e",
+      "entradas": {
+        "data/eval.jsonl": "a7ef93e626ed96a7"
+      },
+      "python": "3.12.13",
+      "tareas_elegidas": 158
+    }
+  ]
+}
