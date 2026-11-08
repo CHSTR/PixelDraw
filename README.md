@@ -4,6 +4,7 @@
 
 El modelo recibe una especificación ("dibuja una manzana sobre fondo gris, con el cuerpo rojo...") y responde con las celdas que pinta. Un verificador escrito en código revisa formas, posiciones, relaciones y conceptos, sin clasificador de imágenes, y devuelve la recompensa. Cualquier dibujo que cumpla la especificación recibe 1.0.
 
+<a id="figura-ejemplos"></a>
 ![imagen con ejemplos](docs/ejemplos.png)
 
 *En la imagen se ven ejemplos con los distintos niveles de dificultad, desde L0 (rellenos) hasta L5 (conceptos sin receta). La primera columna muestra la referencia, la segunda columna la respuesta del modelo DeepSeek V4.1-Flash (una traza SFT), la tercera columna la respuesta de Qwen3.8-27b_nothink, la cuarta y quinta columna la respuesta de Qwen3-1.7B con y sin razonamiento, respectivamente. Los marcos denotan el resultado del verificador (verde correcto, rojo incorrecto). Al final se encuentran los prompts.*
@@ -227,7 +228,7 @@ Los detalles de diseño (formato, parser, crédito parcial, tests y decisiones d
 | DeepSeek V4.1-Flash | Profesor (trazas SFT y DPO) y referencia | Pesos abiertos (licencia MIT); no corre en una máquina normal | OpenCode, `opencode-go/deepseek-v4.1-flash` |
 
 
-## Prompts de la figura
+## Prompts de la [figura](#figura-ejemplos)
 
 <!-- Implementa una lista que al hacer click muestre el prompt completo, y que al hacer click en el prompt lo copie al portapapeles. -->
 
