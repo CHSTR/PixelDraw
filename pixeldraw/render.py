@@ -52,12 +52,21 @@ def grid_html(g, px):
             f'grid-auto-rows:{px}px">{cells}</div>')
 
 
+def run_label(path):
+    """Etiqueta de una corrida: el nombre del archivo sin extensión (p. ej. qwen3-1.7b_think).
+
+    Se usa el archivo y no el campo `model` porque dos corridas del mismo modelo (con y sin
+    razonamiento) comparten ese campo y se mezclarían en la galería.
+    """
+    return os.path.basename(path).removesuffix(".jsonl")
+
+
 def load_results(paths):
     """Filas válidas de varios archivos: la última versión de cada muestra, sin errores del servidor."""
     rows = []
     for path in paths:
         for r in latest_samples(read_jsonl(path)):
-            rows.append(dict(r, model=r.get("model") or os.path.basename(path)))
+            rows.append(dict(r, model=run_label(path)))
     return rows
 
 
@@ -204,7 +213,7 @@ def main():
     ap.add_argument("--pick", choices=["todas", "fallidas", "resueltas", "discrepan"], default="todas")
     ap.add_argument("--per-group", type=int, default=1, help="tareas por (nivel, familia, tamaño)")
     ap.add_argument("--max-tasks", type=int, default=60)
-    ap.add_argument("--samples", type=int, default=2, help="muestras por modelo y tarea")
+    ap.add_argument("--samples", type=int, default=2, help="muestras por corrida y tarea (cada una es una tarjeta)")
     ap.add_argument("--px", type=int, default=16, help="tamaño de celda en el HTML")
     ap.add_argument("--png-dir", help="si se indica, guarda una figura PNG por tarea (requiere matplotlib)")
     ap.add_argument("--seed", type=int, default=0)
