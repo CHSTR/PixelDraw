@@ -218,6 +218,14 @@ python -m pixeldraw.report --tasks data/eval.jsonl \
 
 Los detalles de diseño (formato, parser, crédito parcial, tests y decisiones del verificador) están en [docs/DETALLES.md](docs/DETALLES.md).
 
+## Modelos
+
+| Modelo | Rol | Pesos | Cómo se ejecutó |
+|---|---|---|---|
+| Qwen3-1.7B | Modelo objetivo | [Qwen/Qwen3-1.7B](https://huggingface.co/Qwen/Qwen3-1.7B) · GGUF: [Qwen/Qwen3-1.7B-GGUF](https://huggingface.co/Qwen/Qwen3-1.7B-GGUF) | llama.cpp, Q8_0, con y sin razonamiento |
+| Qwen3.8-27B | Referencia intermedia | [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) | llama.cpp, Q4_K_M, sin razonamiento |
+| DeepSeek V4.1-Flash | Profesor (trazas SFT y DPO) y referencia | Pesos abiertos (licencia MIT); no corre en una máquina normal | OpenCode, `opencode-go/deepseek-v4.1-flash` |
+
 
 ## Prompts de la figura
 
