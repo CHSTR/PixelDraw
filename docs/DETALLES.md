@@ -112,12 +112,12 @@ Cada restricción es **sustantiva** (lo que pide la tarea: formas, posiciones, r
 
   reward_partial = 0,9 · max(0, (s − b)/(1 − b)) · (0,5 + 0,5·h)
 
-  - **s** es la fracción de restricciones sustantivas cumplidas (forma, posición, relaciones, conteos). Aquí, 3 de 4: s = 0,75.
+  - **s** es la fracción de restricciones sustantivas cumplidas (forma, posición, relaciones, conteos). Aquí, 1 de 4: s = 0,25.
   - **b** es el puntaje que se obtiene sin dibujar nada, pintando toda la grilla de un color. Aquí, b = 0. Restarlo evita premiar respuestas triviales.
   - **h** es la fracción de restricciones de higiene cumplidas (colores permitidos, región). Aquí, h = 1. Violarlas descuenta hasta la mitad, pero no anula lo demás.
   - **0,9** es el tope: una respuesta incorrecta nunca vale lo mismo que una correcta.
 
-  Resultado: 0,9 × 0,75 × 1 = **0,675**.
+    Resultado: 0,9 × 0,25 × 1 = **0,225**.
 
 Cada pieza de la fórmula corrige un abuso que encontramos al probarla:
 - sin el piso b, una grilla de un solo color sacaba 0,8 en las tareas de simetría;

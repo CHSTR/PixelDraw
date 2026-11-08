@@ -7,7 +7,7 @@ El modelo recibe una especificación ("dibuja una manzana sobre fondo gris, con 
 <a id="figura-ejemplos"></a>
 ![imagen con ejemplos](docs/ejemplos.png)
 
-*En la imagen se ven ejemplos con los distintos niveles de dificultad, desde L0 (rellenos) hasta L5 (conceptos sin receta). La primera columna muestra la referencia, la segunda columna la respuesta del modelo DeepSeek V4.1-Flash (una traza SFT), la tercera columna la respuesta de Qwen3.8-27b_nothink, la cuarta y quinta columna la respuesta de Qwen3-1.7B con y sin razonamiento, respectivamente. Los marcos denotan el resultado del verificador (verde correcto, rojo incorrecto). Al final se encuentran los prompts.*
+*En la imagen se ven ejemplos con los distintos niveles de dificultad, desde L0 (rellenos) hasta L5 (conceptos sin receta). La primera columna muestra la referencia, la segunda columna la respuesta del modelo DeepSeek V4.1-Flash, la tercera columna la respuesta de Qwen3.8-27b_nothink, la cuarta y quinta columna la respuesta de Qwen3-1.7B con y sin razonamiento, respectivamente. Los marcos denotan el resultado del verificador (verde correcto, rojo incorrecto). Al final se encuentran los prompts.*
 
 ## Cómo funciona
 
@@ -142,7 +142,7 @@ Son 9.798 tareas generadas por código, en seis niveles y tres tamaños de grill
 | L1 | Una forma en una posición exacta | "un rectángulo relleno de 4 filas × 2 columnas de color morado, con su esquina superior izquierda en la fila 3, columna 4" |
 | L2 | 2–3 formas con relaciones | "una línea vertical azul de 2 celdas y un cuadrado negro de 2×2 que no se toquen, ni siquiera en diagonal" |
 | L3 | Conteos, simetría, pares | "exactamente 3 puntos rojos que no se toquen, ni siquiera en diagonal" |
-| L4 | Concepto con receta explícita | La manzana de la figura de arriba |
+| L4 | Concepto con receta explícita | El Árbol de la figura de arriba |
 | L5 | Concepto sin receta | "dibuja una casa reconocible sobre fondo gris, en la mitad izquierda de la grilla; elige tú los colores" |
 
 | Split | Tareas | Uso |
@@ -174,22 +174,24 @@ python -m pixeldraw.derive --tasks data/train.jsonl \
 
 ## Línea base (eval, pass@1 %)
 
-| Nivel | Qwen3-1.7B sin razonamiento | Qwen3-1.7B con razonamiento | DeepSeek V4.1-Flash |
-|---|---:|---:|---:|
-| L0 | 0,4 | 60,0 | 100 |
-| L1 | 45,4 | 81,7 | 98,3 |
-| L2 | 3,3 | 35,8 | 100 |
-| L3 | 19,6 | 50,8 | 100 |
-| L4 | 0 | 0 | 100 |
-| L5 | 0 | 0 | 81,2 |
+| Nivel | Qwen3-1.7B sin razonamiento | Qwen3-1.7B con razonamiento | Qwen3.8-27B sin razonamiento | DeepSeek V4.1-Flash |
+|---|---:|---:|---:|---:|
+| L0 | 0,4 | 60,0 | 94,2 | 100 |
+| L1 | 45,4 | 81,7 | 93,3 | 98,3 |
+| L2 | 3,3 | 35,8 | 66,7 | 100 |
+| L3 | 19,6 | 50,8 | 66,7 | 100 |
+| L4 | 0 | 0 | 56,7 | 100 |
+| L5 | 0 | 0 | 31,2 | 81,2 |
 
-- Hay 30 tareas por nivel (8 en L5) y k = 8, 4 y 2 muestras por tarea, respectivamente.
+- Hay 30 tareas por nivel (8 en L5) y k = 8, 4, 4 y 2 muestras por tarea, respectivamente.
+
 - Las tablas completas (pass@k, crédito parcial, truncamiento y calibración) se reproducen con:
 
 ```bash
 python -m pixeldraw.report --tasks data/eval.jsonl \
     --run "Qwen3-1.7B sin razonamiento=results/eval/qwen3-1.7b_nothink.jsonl" \
           "Qwen3-1.7B con razonamiento=results/eval/qwen3-1.7b_think.jsonl" \
+          "Qwen3.8-27B sin razonamiento=results/eval/qwen-27b_nothink.jsonl" \
           "DeepSeek V4.1-Flash=results/eval/deepseek-v4.1-flash.jsonl" \
     --k 2 4 8 --families
 ```
@@ -212,7 +214,7 @@ python -m pixeldraw.report --tasks data/eval.jsonl \
   - Dificultad graduable por nivel y por tamaño
   - Verificador probado con respuestas reales de los modelos
 - **Limitaciones:**
-  - L5 tiene pocos enunciados distintos (8 tareas en eval) - esto principalmente por no tener un clasificador de imágenes que pueda reconocer conceptos visuales
+  - L5 tiene pocos enunciados distintos (8 tareas en eval) - porque solo se varía el concepto, fondo, región y tamaño.
   - "Redondeado" es una convención geométrica
   - Pocos conceptos (cuatro en L5)
   - DeepSeek resuelve casi todo L0–L4, así que para comparar modelos grandes conviene usar L5 y `test_ood`.
