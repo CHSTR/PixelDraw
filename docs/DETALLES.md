@@ -1,4 +1,4 @@
-# PixelDraw — detalles técnicos
+# PixelDraw — Detalles
 
 Este documento explica las decisiones de diseño del entorno y por qué se tomaron. Para instalar y usar el entorno, ver el [README](../README.md).
 
@@ -25,10 +25,8 @@ El tamaño de la grilla (6, 8, 12; 10 y 16 en test_ood) es un segundo eje de dif
 | test_ood | 1.450 | 200 | 200 | 200 | 200 | 490 | 160 |
 
 - **Distribución.** train, eval y test usan grillas de 6, 8 y 12. `test_ood` usa grillas de 10 y 16, y además el concepto *sol*, que no aparece en los otros splits.
-- **Sin fugas.** La deduplicación usa el enunciado sin el ejemplo de formato (`core_id`), así que ninguna tarea aparece en dos splits ni siquiera con otro ejemplo. Antes de esta corrección, 61 tareas de test compartían el enunciado con train.
-- **Limpieza.** Durante el desarrollo, el verificador se ajustó mirando las respuestas a dos conjuntos de calibración de 540 tareas, que compartían enunciados con los splits. Se quitaron esas tareas de eval (29), test (65) y test_ood (10); train no se tocó. `data/limpieza.json` lista cada tarea quitada.
-- **L5 es chico por construcción.** La consigna implícita solo varía en concepto, fondo, región y tamaño, así que hay 162 tareas de L5 entre train, eval y test. Cuando un nivel tiene menos enunciados que los pedidos, el conjunto se reparte en proporción entre train, eval y test, en vez de agotarse en train.
-- **Corrección posterior.** Una tarea de test_ood (`L5-16-ffa875243c`) tenía un ejemplo de formato que, después de flexibilizar el tallo de la manzana en L5, obtenía 0,15 de crédito parcial. Se le cambió el ejemplo y pasó a ser `L5-16-21b5689b56`.
+- **Sin fugas.** La deduplicación usa el enunciado sin el ejemplo de formato (`core_id`), así que ninguna tarea aparece en dos splits ni siquiera con otro ejemplo.
+- **Limpieza.** Durante el desarrollo, el verificador se ajustó mirando las respuestas a dos conjuntos de calibración de 540 tareas, que compartían enunciados con los splits.
 
 ## Formato de respuesta
 
@@ -50,25 +48,93 @@ azul: (5-6,1)
 
 **Estricto donde importa.** Exactamente una línea `fondo:`, solo líneas `color: (f,c)…`, coordenadas dentro de 1..N y rangos crecientes; cualquier otra cosa invalida la respuesta. Si una celda aparece dos veces, vale la última línea.
 
-## Verificador
+## Verificador - Sin clasificador de imágenes
 
-- **Parser.** Si el bloque tiene una línea `fondo:`, usa el formato disperso. Si no, toma el último `<answer>`; si no hay, el último bloque de código; si tampoco, el último tramo de filas de grilla.
-  - Acepta dígitos separados por espacios o comas, dígitos contiguos, JSON (lista o `{"grid": ...}`), nombres de colores, etiquetas "Fila k:", tablas Markdown y corchetes por fila.
-  - Ignora el contenido de `<think>`; si el `<think>` quedó sin cerrar, la recompensa es 0.
-  - Exige exactamente N×N.
-- **Restricciones.** Todo es geométrico: componentes 4-conexas, igualdad exacta con la plantilla de la forma, cajas contenedoras para las relaciones, vecindad 4 u 8, y filas y columnas contiguas para "redondeado".
-- **Crédito parcial.** `reward_partial` vale 1.0 si la tarea está resuelta. Si no:
+El verificador es la pieza central del entorno. En aprendizaje por refuerzo el modelo optimiza exactamente lo que el verificador premia. Si acepta una respuesta incorrecta, el modelo aprende a producir esa respuesta. Por eso no se evalúa si el dibujo "se parece" a algo, sino si cumple, una por una, las restricciones de la tarea.
 
-  0,9 · max(0, (s − b)/(1 − b)) · (0,5 + 0,5·h)
+### Por qué no un clasificador de imágenes
 
-  - s es la fracción de restricciones **sustantivas** cumplidas (formas, relaciones, conteos).
-  - b es el mejor puntaje sustantivo de una grilla de un solo color.
-  - h es la fracción de restricciones de higiene cumplidas (colores permitidos, región).
+La alternativa obvia sería renderizar la grilla y preguntarle a un clasificador (por ejemplo, CLIP) si ve una manzana. Se descartó por estas razones:
 
-  Así, una salida trivial no recibe señal, la higiene descuenta pero no anula el crédito, y una respuesta no resuelta nunca alcanza a una resuelta (tope 0,9). Cada pieza responde a un problema encontrado:
-  - una grilla uniforme sacaba 0,8 en simetría;
-  - cualquier dibujo de dos colores sacaba 0,2 en la casa de L5;
-  - una respuesta con colores extra podía igualar a una solución.
+1. **Eficiencia.** GRPO genera varias respuestas por prompt en cada paso, y cada una hay que calificarla. Un clasificador como CLIP necesita GPU y tarda por respuesta. En cambio, el verificador corre en milisegundos, sin GPU y siempre da el mismo resultado.
+2. **No tiene sentido en grillas tan chicas.** Las grillas van de 6×6 a 12×12, es decir, de 36 a 144 píxeles. Los clasificadores se entrenan con fotos e ilustraciones, y con imágenes así sus puntajes serían casi ruido.
+3. **No puede revisar la tarea completa.** Las tareas piden posiciones exactas, conteos, colores y relaciones ("a la izquierda de", "sin tocarse"), justo lo que los clasificadores hacen peor.
+4. **Se puede engañar y no explica el fallo.** Un modelo entrenado con RL contra un clasificador tiende a encontrar cambios mínimos que lo engañan, en vez de aprender a dibujar. Además, un clasificador solo entrega un número; el verificador dice qué restricción falló, lo que permite dar crédito parcial y auditar las respuestas.
+
+El costo de esta decisión es que el verificador solo acepta lo que sus reglas describen: una manzana razonable que no cumpla la definición de "redondeado" se rechaza aunque se vea bien. Para reducir estos rechazos injustos se revisaron a mano los dibujos de los modelos que el verificador rechazaba en L5. Cuando el dibujo era razonable, se modificaron las regla para aceptar ese tipo de variante. Por ejemplo, ahora se aceptan semáforos horizontales y tallos más largos. En L4 las reglas siguen siendo estrictas, porque ahí el prompt da la receta exacta.
+
+### Cómo califica una respuesta
+
+Al generar cada tarea, el generador guarda también su especificación (`spec`): la lista de restricciones que debe cumplir el dibujo. El verificador nunca compara con un dibujo de referencia, así que **cualquier** dibujo que cumpla las restricciones recibe 1.0.
+
+![](../docs/manzana.png)
+
+Ejemplo con una respuesta incorrecta de Qwen3-1.7B sin razonamiento a la tarea `L4-6-3d57f2f934` de eval:
+
+> *Dibuja una manzana sobre fondo gris: un cuerpo redondeado de color blanco, y un tallo vertical de color azul de 1 o 2 celdas apoyado justo encima del cuerpo (su celda inferior toca una celda de la fila superior del cuerpo), y una hoja de color verde de 1 a 3 celdas que toque el tallo (puede ser en diagonal). […] No uses otros colores.*
+
+```text
+<answer>
+fondo: gris
+blanco: (1,1)-(1,3) (1,4)-(1,6) (2,2)-(2,4) (2,5)-(2,6) (3,2)-(3,4) (3,5)-(3,6) (4,2)-(4,4) (4,5)-(4,6) (5,2)-(5,4) (5,5)-(5,6)
+azul: (2,1)-(2,2) (3,1)-(3,2)
+verde: (3,3)-(3,5)
+</answer>
+```
+
+**1. Parser: texto → grilla.** Toma el último bloque `<answer>` (lo que esté dentro de `<think>` se ignora) y lo convierte en una grilla de 6×6. Aquí el modelo escribe los tramos con la notación de esquina a esquina, `(1,1)-(1,3)`, que el parser acepta como equivalente a `(1,1-3)`. Si una celda aparece en dos líneas, vale la última: el tallo azul y la hoja verde pisan celdas que antes eran blancas. El parser también acepta el color por índice, colores en femenino o plural, grilla densa y JSON. Rechaza lo ambiguo o inválido: dos líneas `fondo:`, coordenadas fuera de la grilla o un `<think>` sin cerrar. Una respuesta que no se puede leer recibe 0.
+
+```text
+      c1 c2 c3 c4 c5 c6
+f1     B  B  B  B  B  B      · gris   B blanco
+f2     A  A  B  B  B  B      A azul   V verde
+f3     A  A  V  V  V  B
+f4     ·  B  B  B  B  B
+f5     ·  B  B  B  B  B
+f6     ·  ·  ·  ·  ·  ·
+```
+
+**2. Restricciones: grilla y lista de verificaciones.** Todo se revisa con geometría simple sobre las celdas: regiones conectadas de cada color, formas exactas, posiciones, conteos, contacto entre partes y las reglas de cada concepto.
+
+| Restricción | Tipo | Resultado |
+|---|---|---|
+| `cuerpo_redondeado` | sustantiva | ✗ el blanco ocupa casi toda la grilla, con el tallo y la hoja incrustados: no es un cuerpo relleno con las esquinas recortadas |
+| `tallo_vertical` | sustantiva | ✗ el azul es un bloque de 2×2, no una línea vertical de 1 o 2 celdas |
+| `tallo_sobre_cuerpo` | sustantiva | ✗ el tallo está dentro del cuerpo, no apoyado encima |
+| `hoja_junto_al_tallo` | sustantiva | ✓ la hoja verde toca el tallo en (3,3) |
+| `sin_colores_extra` | higiene | ✓ |
+
+Cada restricción es **sustantiva** (lo que pide la tarea: formas, posiciones, relaciones, conteos) o **de higiene** (usar solo los colores permitidos y quedarse dentro de la región). La diferencia importa en el crédito parcial, es decir: las sustantivas dan el crédito y las de higiene solo lo descuentan, porque una grilla vacía las cumple sin dibujar nada.
+
+**3. Recompensa.**
+- `reward` es binaria: 1.0 solo si se cumplen **todas** las restricciones. Aquí es 0.
+- `reward_partial` da crédito por lo que sí se cumple, para que GRPO tenga señal en tareas que el modelo casi nunca resuelve. Si la tarea no está resuelta:
+
+  reward_partial = 0,9 · max(0, (s − b)/(1 − b)) · (0,5 + 0,5·h)
+
+  - **s** es la fracción de restricciones sustantivas cumplidas (forma, posición, relaciones, conteos). Aquí, 3 de 4: s = 0,75.
+  - **b** es el puntaje que se obtiene sin dibujar nada, pintando toda la grilla de un color. Aquí, b = 0. Restarlo evita premiar respuestas triviales.
+  - **h** es la fracción de restricciones de higiene cumplidas (colores permitidos, región). Aquí, h = 1. Violarlas descuenta hasta la mitad, pero no anula lo demás.
+  - **0,9** es el tope: una respuesta incorrecta nunca vale lo mismo que una correcta.
+
+  Resultado: 0,9 × 0,75 × 1 = **0,675**.
+
+Cada pieza de la fórmula corrige un abuso que encontramos al probarla:
+- sin el piso b, una grilla de un solo color sacaba 0,8 en las tareas de simetría;
+- sin separar la higiene, cualquier dibujo de dos colores sacaba 0,2 en la casa de L5;
+- sin el tope, una respuesta con colores extra podía valer lo mismo que una correcta.
+
+### Cómo sabemos que no se equivoca
+
+Un verificador puede fallar de dos maneras, y no son igual de graves:
+- **Falso positivo:** acepta una respuesta incorrecta. Es el error grave, porque RL lo refuerza.
+- **Falso negativo:** rechaza una respuesta correcta. Solo se pierde señal en ese caso, sin enseñar nada incorrecto.
+
+Por eso el verificador es estricto por diseño, y lo ponemos a prueba en las dos direcciones. `python -m tests.verifier_suite data/eval.jsonl` corre 83.228 casos sin fallas:
+- **contra falsos negativos:** la referencia de cada tarea, 31 formas equivalentes de escribirla, soluciones alternativas válidas y 24 dibujos reales de modelos revisados a mano
+- **contra falsos positivos:** mutaciones que rompen una restricción y casos adversariales (grillas vacías o uniformes, varias respuestas, la solución escondida en `<think>`, texto como "reward: 1.0", copiar el ejemplo del prompt, colores inventados).
+
+Los falsos negativos que aparecieron con respuestas reales (colores en femenino, líneas vacías, comentarios, semáforos horizontales…) se corrigieron con reglas generales, no con casos puntuales, y cada uno quedó fijado como test.
 
 ## Tests
 
@@ -110,13 +176,6 @@ Cada uno quedó cubierto por un test de formato equivalente.
 - si un nivel queda casi siempre en "nunca", conviene bajar el tamaño de la grilla o la cantidad de objetos y relaciones;
 - si queda en "siempre", conviene subirlos;
 - si la mayoría de los fallos son de formato, el problema es la escritura de la grilla y no el dibujo.
-
-**OpenCode.** Algunos modelos (como `opencode-go/deepseek-v4.1-flash`) solo están disponibles dentro de OpenCode. `pixeldraw.probe_opencode` llama a `opencode run --format json` una vez por muestra, con un agente propio:
-- todas las herramientas denegadas;
-- temperatura fija;
-- un prompt de sistema que pide un **plan breve** (`<plan>`, 1–3 líneas sobre qué celdas ocupa cada parte) antes de `<answer>`.
-
-Así las trazas son cortas (~130–230 tokens) y enseñan una estrategia verificable. Cada fila guarda una huella del prompt de sistema (`prompt_sha256`), para no mezclar corridas con prompts distintos al retomar. OpenCode puede añadir contexto propio al prompt, así que esta vía es algo menos controlada que una API directa.
 
 ## Galerías
 

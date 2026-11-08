@@ -4,11 +4,9 @@
 
 El modelo recibe una especificación ("dibuja una manzana sobre fondo gris, con el cuerpo rojo...") y responde con las celdas que pinta. Un verificador escrito en código revisa formas, posiciones, relaciones y conceptos, sin clasificador de imágenes, y devuelve la recompensa. Cualquier dibujo que cumpla la especificación recibe 1.0.
 
-![Ejemplo: misma tarea, una respuesta correcta y una incorrecta](docs/ejemplo.png)
+![imagen con ejemplos](docs/ejemplos.png)
 
-*La misma tarea de L4 con dos respuestas reales. A la izquierda, DeepSeek V4.1-Flash (una traza SFT); a la derecha, Qwen3-1.7B (el rechazo de un par DPO). Al 1.7B le falta una sola restricción, el tallo vertical, y recibe crédito parcial.*
-
-Proyecto del Desafío de Investigación de IIC-3694 Inteligencia Artificial Generativa (PUC Chile, 2026).
+*En la imagen se ven ejemplos con los distintos niveles de dificultad, desde L0 (rellenos) hasta L5 (conceptos sin receta). La primera columna muestra la referencia, la segunda columna la respuesta del modelo DeepSeek V4.1-Flash (una traza SFT), la tercera columna la respuesta de Qwen3.8-27b_nothink, la cuarta y quinta columna la respuesta de Qwen3-1.7B con y sin razonamiento, respectivamente. Los marcos denotan el resultado del verificador (verde correcto, rojo incorrecto). Al final se encuentran los prompts.*
 
 ## Cómo funciona
 
@@ -22,7 +20,7 @@ Proyecto del Desafío de Investigación de IIC-3694 Inteligencia Artificial Gene
    </answer>
    ```
 3. **Parser.** Toma el último `<answer>` e ignora el contenido de `<think>`. Acepta sintaxis equivalentes: grilla densa de índices, JSON, colores en femenino o plural, índices en vez de nombres, rectángulos de esquina a esquina `(f1,c1)-(f2,c2)` y comentarios.
-4. **Verificador.** Revisa las restricciones de la tarea sobre la grilla: componentes conexas, formas exactas, relaciones espaciales, conteos, simetría y la gramática de cada concepto.
+4. **Verificador.** Revisa las restricciones de la tarea sobre la grilla: componentes conexas, formas exactas, relaciones espaciales, conteos, simetría y la gramática de cada concepto. Por temas de eficiencia es que no se utiliza un clasificador de imágenes. 
 5. **Recompensa.**
    - `reward` es binaria: 1.0 si se cumplen todas las restricciones.
    - `reward_partial` da señal densa para GRPO: crédito por restricciones cumplidas, normalizado contra la mejor grilla de un solo color y con tope de 0,9 para respuestas no resueltas.
@@ -34,20 +32,26 @@ Solo hace falta Python 3.10 o superior. El entorno no tiene dependencias externa
 ```bash
 git clone <url-del-repo> pixeldraw
 cd pixeldraw
-pip install -e ".[dev]"          # opcional: instala pytest y los comandos pixeldraw-*
+
+# Crear un entorno virtual (opcional pero recomendado), en este caso yo utilizo uv
+# curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv --python 3.11
+source .venv/bin/activate
+
+uv pip install -e ".[dev]"       # opcional: instala pytest y los comandos pixeldraw-*
 python -m pytest                 # pruebas rápidas
 ```
 
 Para usarlo sin instalar nada, basta correr los comandos desde la raíz del repo con `python -m pixeldraw.<herramienta>`.
 
 Requisitos opcionales:
-- `matplotlib`, para las figuras PNG de `pixeldraw.render` (`pip install -e ".[figuras]"`).
+- `matplotlib`, para las figuras PNG de `pixeldraw.render` (`uv pip install -e ".[figuras]"`).
 - Un servidor compatible con la API de OpenAI (por ejemplo `llama serve` de llama.cpp), para medir modelos.
-- [OpenCode](https://opencode.ai), para modelos que solo están disponibles ahí.
+- [OpenCode](https://opencode.ai), para modelos que solo están disponibles ahí. En este caso en particular, se utilizó `opencode-go/deepseek-v4.1-flash` para generar las trazas SFT y los pares DPO.
 
 ## Uso
 
-### Recompensa (interfaz del curso)
+### Recompensa
 
 ```python
 from pixeldraw import load_tasks, reward, reward_partial, verify
@@ -63,14 +67,17 @@ verify(t["spec"], completion)            # detalle: cada restricción, crédito 
 - `reward` busca la especificación de la tarea a partir del prompt, así que antes hay que cargar las tareas, con `load_tasks` o con la variable de entorno `PIXELDRAW_TASKS=data/train.jsonl`.
 - El prompt puede ser un texto o una lista de mensajes de chat; en ese caso se usa el último mensaje del usuario.
 
-Ejemplo con la tarea `L1-6-d221115c34` de eval (rectángulo morado de 4 filas × 2 columnas con su esquina superior izquierda en (3,4), sobre fondo blanco):
+| Nivel | Tarea | DeepSeek V4.1-Flash | Qwen3.8-27B sin razonamiento | Qwen3-1.7B con razonamiento | Qwen3-1.7B sin razonamiento |
+|---|---|---|---|---|---|
+| L0 | `L0-6-86d4ab1c5a` | **1** | **1** | **1** | 0 · 0.00 (`region_2`) |
+| L1 | `L1-6-7abc442fe9` | **1** | **1** | **1** | 0 · 0.00 (`region_0`) |
+| L2 | `L2-6-e436de905b` | **1** | **1** | 0 · 0.30 (`objeto_0_forma`) | 0 · 0.15 (`solo_colores_permitidos`) |
+| L3 | `L3-6-e98fc09562` | **1** | 0 · 0.45 (`todas_con_la_forma`) | 0 · 0.45 (`todas_con_la_forma`) | 0 · 0.00 (`cantidad_exacta`) |
+| L4 | `L4-6-5cd2d1550d` | **1** | 0 · 0.60 (`copa_redondeada`) | 0 · truncada | 0 · 0.00 (`copa_redondeada`) |
+| L5 | `L5-6-85c7bf623b` | **1** | 0 · 0.00 (`cuerpo_rectangular`) | 0 · 0.00 (`color_desconocido`) | 0 · 0.00 (`cuerpo_rectangular`) |
 
-| Respuesta | `reward` |
-|---|---:|
-| `fondo: blanco` / `morado: (3-6,4-5)` | 1.0 |
-| `fondo: blanco` / `morada: (3,4)-(6,5)` | 1.0 |
-| La misma grilla en formato denso (seis filas de índices) | 1.0 |
-| `fondo: blanco` / `morado: (3-6,4)` (falta una columna) | 0.0 |
+
+El parser también acepta formas equivalentes de escribir la misma respuesta. En la tarea `L1-6-d221115c34`, `morado: (3-6,4-5)`, `morada: (3,4)-(6,5)` y la grilla densa reciben 1.0, mientras que `morado: (3-6,4)`, al que le falta una columna, recibe 0.0.
 
 ### Herramientas
 
@@ -78,7 +85,7 @@ Ejemplo con la tarea `L1-6-d221115c34` de eval (rectángulo morado de 4 filas ×
 |---|---|
 | `python -m pixeldraw.generate --mode full --out-dir data/` | Genera los splits |
 | `python -m pixeldraw.probe` | Mide pass@1 y pass@k de un modelo servido con una API compatible con OpenAI |
-| `python -m pixeldraw.probe_opencode` | Lo mismo, para modelos a los que solo se accede por OpenCode |
+| `python -m pixeldraw.probe_opencode` | Lo mismo, para modelos a los que solo se accede por OpenCode. En este caso solo con DeepSeek-v4.1-flash |
 | `python -m pixeldraw.derive` | Construye las trazas SFT y los pares DPO a partir de corridas sobre train |
 | `python -m pixeldraw.report` | Tablas de línea base y calibración en Markdown y LaTeX |
 | `python -m pixeldraw.render` | Galería HTML con los dibujos de cada modelo y su veredicto |
@@ -126,7 +133,7 @@ docs/                   detalles técnicos y la figura de ejemplo
 
 ## Dataset
 
-Son 9.798 tareas generadas por código, en seis niveles y tres tamaños de grilla (6, 8 y 12).
+Son 9.798 tareas generadas por código, en seis niveles y tres tamaños de grilla (6, 8 y 12). La primera figura ejemplifica muy bien los niveles y la dificultad.
 
 | Nivel | Qué pide | Ejemplo (enunciados de eval, abreviados) |
 |---|---|---|
@@ -146,7 +153,7 @@ Son 9.798 tareas generadas por código, en seis niveles y tres tamaños de grill
 
 - Ningún enunciado se repite entre splits; la deduplicación ignora el ejemplo de formato.
 - De eval, test y test_ood se quitaron las tareas usadas para ajustar el verificador (`data/limpieza.json`).
-- Los archivos de `data/` son la versión canónica. Regenerarlos con el código actual da las mismas tareas de L0–L4, pero no las de L5. El generador elige el ejemplo de formato con el verificador, y el verificador de L5 cambió después de generar los splits.
+- **Usa los archivos de `data/` tal como están, sin regenerarlos.** Son los mismos que se usaron para la línea base, los datos derivados y el informe. Si vuelves a correr el generador, L0–L4 salen idénticos, pero L5 no: el generador usa el verificador para elegir el ejemplo de formato de cada prompt, y las reglas de L5 cambiaron después de crear los splits. El resultado serían tareas de L5 con otros ejemplos, otros prompts y otros IDs.
 
 ## Datos derivados
 
@@ -194,20 +201,79 @@ python -m pixeldraw.report --tasks data/eval.jsonl \
   - casos adversariales: varias respuestas, inyecciones, la solución escondida en `<think>`, copiar el ejemplo del prompt y otros;
   - 24 dibujos reales revisados a mano.
 
-  Ninguna estrategia trivial obtiene crédito parcial. Sobre `test_ood` son 163.954 casos, también sin fallas.
 - **Calibración.** Con razonamiento, entre 27% y 60% de las tareas de L0–L3 las resuelve el 1.7B solo a veces: es la zona donde GRPO tiene señal. L4–L5 quedan en 0%, así que necesitan SFT antes de RL.
 
 ## Fortalezas y limitaciones
 
 - **Fortalezas:**
-  - recompensa sin modelos aprendidos, incluso para conceptos visuales;
-  - respuestas abiertas desde L2;
-  - dificultad graduable por nivel y por tamaño;
-  - un verificador probado con respuestas reales de los modelos.
+  - Recompensa sin modelos aprendidos, incluso para conceptos visuales
+  - Respuestas abiertas desde L2
+  - Dificultad graduable por nivel y por tamaño
+  - Verificador probado con respuestas reales de los modelos
 - **Limitaciones:**
-  - L5 tiene pocos enunciados distintos (8 tareas en eval);
-  - "redondeado" es una convención geométrica;
-  - hay pocos conceptos (cuatro en L5);
+  - L5 tiene pocos enunciados distintos (8 tareas en eval) - esto principalmente por no tener un clasificador de imágenes que pueda reconocer conceptos visuales
+  - "Redondeado" es una convención geométrica
+  - Pocos conceptos (cuatro en L5)
   - DeepSeek resuelve casi todo L0–L4, así que para comparar modelos grandes conviene usar L5 y `test_ood`.
 
 Los detalles de diseño (formato, parser, crédito parcial, tests y decisiones del verificador) están en [docs/DETALLES.md](docs/DETALLES.md).
+
+
+## Prompts de la figura
+
+<!-- Implementa una lista que al hacer click muestre el prompt completo, y que al hacer click en el prompt lo copie al portapapeles. -->
+
+<details>
+<summary><b>L0</b> Bands - 6×6</summary>
+
+```text
+Divide la grilla en 3 franjas verticales de igual ancho y píntalas, de izquierda a derecha, de: azul, rojo, amarillo.
+```
+</details>
+
+<details>
+<summary><b>L1</b> Rect - 6×6</summary>
+
+```text
+Sobre un fondo blanco, dibuja un rectángulo relleno de 3 filas × 2 columnas de color negro, con su esquina superior izquierda en la fila 3, columna 4. Todas las demás celdas deben quedar de color blanco.
+```
+</details>
+
+<details>
+<summary><b>L2</b> 2obj - 6×6</summary>
+
+```text
+Sobre un fondo blanco, dibuja exactamente estas figuras (todas las celdas de un color forman su figura; no uses otros colores):
+- Figura negra: una línea vertical de 2 celdas.
+- Figura verde: un cuadrado relleno de 2×2.
+
+Condiciones:
+- La figura verde debe estar completamente arriba de la figura negra (todas las filas de la figura verde menores que todas las de la figura negra).
+
+La posición exacta es libre mientras se cumplan todas las condiciones. Las figuras no pueden superponerse.
+```
+</details>
+
+<details>
+<summary><b>L3</b> Count - 6×6</summary>
+
+```text
+Sobre un fondo amarillo, dibuja exactamente 2 copias de una línea vertical de 3 celdas, todas de color morado. Ninguna copia puede tocar a otra, ni siquiera en diagonal. No uses otros colores.
+```
+</details>
+
+<details>
+<summary><b>L4</b> Arbol - 6×6</summary>
+
+```text
+Dibuja un árbol sobre fondo negro: una copa redondeada de color rojo y, justo debajo, un tronco vertical de color naranja (un rectángulo de 1 o 2 columnas de ancho y al menos 2 filas de alto). Cada columna del tronco debe tener una celda de copa inmediatamente encima, y la copa debe ser más ancha que el tronco. «Redondeado» significa: relleno, sin huecos, con alto y ancho de al menos 3 celdas y proporción entre 2/3 y 3/2, y con las esquinas recortadas (no un rectángulo completo). No uses otros colores.
+```
+</details>
+
+<details>
+<summary><b>L5</b> Casa - 6×6</summary>
+
+```text
+Dibuja una casa reconocible sobre fondo gris. Todo el dibujo debe quedar en la mitad izquierda de la grilla (columnas 1 a 3). Elige tú los colores apropiados de la paleta. Dibuja solo las partes principales del objeto, sin elementos extra (pasto, nubes, decoraciones). Las partes redondas deben verse redondeadas (rellenas y con las esquinas recortadas) y cada parte debe ser de un solo color, distinto del de las otras partes y del fondo.
+```
+</details>
